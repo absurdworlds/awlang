@@ -1,37 +1,86 @@
+#include "linker.h"
+
 #include "aw/script/driver/main.h"
 
-#include <aw/script/lexer/lexer.h>
-#include <aw/script/lexer/source_manager.h>
-#include <aw/script/parser/parser.h>
-#include <aw/script/diag/diagnostics_engine.h>
-#include <aw/script/semantic/semantic_analyzer.h>
-#include <aw/script/codegen/backend.h>
-#include <aw/script/utility/ast_printer_default.h>
+#include "aw/script/codegen/backend.h"
+#include "aw/script/diag/diagnostics_engine.h"
+#include "aw/script/lexer/lexer.h"
+#include "aw/script/lexer/source_manager.h"
+#include "aw/script/parser/parser.h"
+#include "aw/script/semantic/module_tree.h"
+#include "aw/script/semantic/semantic_analyzer.h"
+#include "aw/script/utility/ast_printer_default.h"
 
-#include <aw/utility/string/join.h>
 #include <aw/io/file.h>
-#include <aw/config.h>
+#include <aw/types/array_view.h>
+#include <aw/utility/string/join.h>
 
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <map>
-#include <cstdlib>
 
 namespace aw::script::driver {
 
-static callbacks null_callbacks;
-
-int run_compiler(const options& options, callbacks* callbacks)
+auto parse_file(
+	source_manager& srcman,
+	diagnostics_engine& diag,
+	std::string_view input)
+	-> ast::module
 {
-	// If callbacks are not specified, use empty callbacks
-	// so that we don't have to make a bunch of null checks
-	if (!callbacks)
-		callbacks = &null_callbacks;
+	lexer lexer(srcman.get_buffer(srcman.add_file(input)));
 
+	aw::script::parser parser({
+		.lexer = lexer,
+		.diag = diag
+	});
 
+	ast::module mod{
+		.path = std::string(input),
+	};
+
+	while(true) {
+		auto decl = parser.parse_top_level();
+		if (!decl)
+			break;
+		mod.decls.push_back(std::move(*decl));
+	}
+
+	return mod;
+}
+
+auto parse_files(
+	source_manager& srcman,
+	diagnostics_engine& diag,
+	array_view<std::string> file_list)
+	-> std::vector<ast::module>
+{
+	std::vector<ast::module> modules;
+
+	for (const auto& input : file_list)
+	{
+		modules.push_back(parse_file(srcman, diag, input));
+	}
+
+	return modules;
+}
+
+void dump_ast(array_view<ast::module> modules)
+{
+	ast_printer_default printer;
+	for (const auto& mod : modules)
+	{
+		for (const auto& decl : mod.decls)
+			printer.print_declaration(decl);
+	}
+}
+
+int run_compiler(const options& options)
+{
 	if (options.input_files.empty())
 	{
-		// TODO: error
+		// TODO: use diagnostics_engine?
+		std::cerr << "No input files given.\n";
 		return EXIT_FAILURE;
 	}
 
@@ -39,36 +88,10 @@ int run_compiler(const options& options, callbacks* callbacks)
 
 	diagnostics_engine diag(srcman);
 
-	std::map<std::string, ast::module> decl_source_map;
+	std::vector<ast::module> in_modules = parse_files(srcman, diag, options.input_files);
 
-	for (const auto& input : options.input_files)
-	{
-		lexer lexer(srcman.get_buffer(srcman.add_file(input)));
-
-		aw::script::parser parser({
-			.lexer = lexer,
-			.diag = diag
-		});
-
-		auto& mod = decl_source_map[input];
-
-		while(true) {
-			auto decl = parser.parse_top_level();
-			if (!decl)
-				break;
-			callbacks->process_declaration(*decl);
-			mod.decls.push_back(std::move(*decl));
-		}
-	}
-
-	if (options.dump_ast) {
-		ast_printer_default printer;
-		for (const auto& [_,in_mod] : decl_source_map)
-		{
-			for (const auto& decl : in_mod.decls)
-				printer.print_declaration(decl);
-		}
-	}
+	if (options.dump_ast)
+		dump_ast(in_modules);
 
 	if (diag.has_error())
 		return EXIT_FAILURE;
@@ -77,9 +100,9 @@ int run_compiler(const options& options, callbacks* callbacks)
 	semantic_analyzer analyzer(diag);
 
 	std::vector<middle::module> modules;
-	for (auto& [file,in_mod] : decl_source_map)
+	for (auto& in_mod : in_modules)
 	{
-		auto input_path = std::filesystem::path(file);
+		auto input_path = std::filesystem::path(in_mod.path);
 
 		auto mod = analyzer.lower(in_mod);
 		mod.name = input_path.stem();
@@ -126,36 +149,11 @@ int run_compiler(const options& options, callbacks* callbacks)
 
 	if (options.mode == mode::link)
 	{
-		// This is a big TODO, I need to figure out how to find the linker,
-		// and how to know what to pass to it
-#if 0
-		std::string linker_invocation = "ld -m elf_x86_64 -pie -dynamic-linker /usr/lib/ld-linux-x86-64.so.2 -lc";
-		linker_invocation += "-o ";
-		linker_invocation += output.stem();
-		linker_invocation += " /usr/lib/Scrt1.o ";
-		linker_invocation += output;
-#endif
-
-#if AW_PLATFORM != AW_PLATFORM_WIN32
-		std::string linker_invocation = "g++ -o";
-		linker_invocation += output_file;
-		linker_invocation += ' ';
-		linker_invocation += aw::string::join(objects, " ");
-#else
-		std::string linker_invocation = "link.exe";
-		linker_invocation += " /machine:x64 /subsystem:console ";
-		linker_invocation += " /manifest /manifest:embed ";
-		linker_invocation += " /debug /OUT:";
-		linker_invocation += output_file;
-		linker_invocation += ' ';
-		linker_invocation += aw::string::join(objects, " ");
-		linker_invocation += " msvcrtd.lib kernel32.lib legacy_stdio_definitions.lib";
-		//linker_invocation += " msvcrt.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib ";
-		//linker_invocation += " shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ";
-#endif
-
-		// TODO: at the very least, replace system() with a proper invocation
-		system(linker_invocation.c_str());
+		run_linker({
+			.linker = default_linker(),
+			.output_file = output_file,
+			.objects = objects,
+		});
 
 		for (const auto& object : objects)
 		{

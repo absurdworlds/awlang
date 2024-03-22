@@ -6,6 +6,7 @@
 namespace aw::script {
 
 // TODO: use composite keys instead of strings?
+// TODO: mangle name?
 auto context::create_type(const ast::type &type) -> ir::type*
 {
 	if (auto _ = get_if<ast::unknown_type>(&type)) {
@@ -13,21 +14,21 @@ auto context::create_type(const ast::type &type) -> ir::type*
 		return nullptr;
 	}
 
-	if (auto ty = get_if<ast::regular_type>(&type)) {
-		auto existing_ty = find_type(ty->name);
+	if (auto* ty = get_if<ast::regular_type>(&type)) {
+		auto existing_ty = find_type(type_name(*ty));
 		if (existing_ty)
 			return existing_ty;
 
-		return add_type(ir::type{ ty->name });
+		return add_type(ir::type{ type_name(*ty) });
 	}
 
-	if (auto arr = get_if<ast::array_type>(&type)) {
+	if (auto* arr = get_if<ast::array_type>(&type)) {
 		auto name = type_name(*arr);
 
 		if (auto existing_ty = find_type(name))
 			return existing_ty;
 
-		auto elem = find_type(arr->elem);
+		auto elem = find_type(type_name(arr->elem));
 
 		// TODO: convert unsized to array_slice
 		return add_type(ir::type{
@@ -40,12 +41,12 @@ auto context::create_type(const ast::type &type) -> ir::type*
 	}
 
 	if (auto ptr = get_if<ast::pointer_type>(&type)) {
-		auto name = ptr->pointee + "*";
+		auto name = type_name(*ptr);
 
 		if (auto existing_ty = find_type(name))
 			return existing_ty;
 
-		auto pointee = find_type(ptr->pointee);
+		auto pointee = find_type(type_name(ptr->pointee));
 
 		return add_type(ir::type{
 			.name = name,

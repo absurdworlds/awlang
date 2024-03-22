@@ -199,7 +199,11 @@ bool lexer::lex_operator(token& token)
 		token.kind = token_kind::semicolon;
 		break;
 	case ':':
-		token.kind = token_kind::colon;
+		if (match(':')) {
+			token.kind = token_kind::double_colon;
+		} else {
+			token.kind = token_kind::colon;
+		}
 		break;
 	case '{':
 		token.kind = token_kind::l_brace;

@@ -39,18 +39,6 @@ struct struct_decl {
 	member_list members;
 };
 
-struct declaration;
-
-// TODO: proper modules
-struct module {
-	std::string name;
-	std::string dir_path;
-	// Items declared in the module
-	std::vector<std::unique_ptr<declaration>> decls;
-	// Types instantiated in the module
-	std::vector<std::unique_ptr<ir::type>> types;
-};
-
 using declaration_variant = std::variant<
 	variable,
 	function,

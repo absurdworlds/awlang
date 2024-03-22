@@ -81,11 +81,15 @@ void ast_printer_default::print_decl(const ast::function& decl)
 {
 	start("func", mixed_scope);
 
-	print_type(decl.return_type);
 	print_inline(decl.name);
+	{
+		start("fn-return", inline_scope);
+		print_type(decl.return_type);
+		end();
+	}
 	start_line();
 	{
-		start("fn-args");
+		start("fn-params");
 		for (const auto& param : decl.params)
 		{
 			print_decl(param);
@@ -93,10 +97,9 @@ void ast_printer_default::print_decl(const ast::function& decl)
 		}
 		end();
 	}
-	{
+	if (decl.body) {
 		start("fn-body");
-		if (decl.body)
-			print(*decl.body);
+		print(*decl.body);
 		end();
 	}
 	end();
@@ -130,6 +133,20 @@ void ast_printer_default::print_decl(const ast::struct_decl& st)
 	end();
 }
 
+void ast_printer_default::print_decl(const ast::import_decl& decl)
+{
+	start("import", inline_scope);
+	print_inline(decl.mod_id.name); // TODO
+	end();
+}
+
+void ast_printer_default::print_decl(const ast::module_header& mod)
+{
+	start("module", inline_scope);
+	print_inline(mod.name);
+	end();
+}
+
 void ast_printer_default::print_decl(const ast::foreign_block& block)
 {
 	start("foreign", mixed_scope);
@@ -147,14 +164,19 @@ void ast_printer_default::print_decl(const ast::foreign_block& block)
 	end();
 }
 
-void ast_printer_default::print(const ast::statement& stmt)
+void ast_printer_default::print_identifier(const ast::identifier& id)
 {
-	std::visit([this] (auto&& node) { print_stmt(node); }, stmt);
+	print_inline(to_string(id));
 }
 
 void ast_printer_default::print_type(const ast::type& type)
 {
 	print_inline(type_name(type));
+}
+
+void ast_printer_default::print(const ast::statement& stmt)
+{
+	std::visit([this] (auto&& node) { print_stmt(node); }, stmt);
 }
 
 void ast_printer_default::print_stmt(const ast::decl_statement& stmt)
@@ -306,6 +328,8 @@ std::string_view spell_operator(ast::unary_operator op)
 		return "!";
 	case ast::unary_operator::binary_negation:
 		return "~";
+	case ast::unary_operator::reference:
+		return "&";
 	}
 	return "<invalid-unary-op>";
 }
@@ -400,9 +424,10 @@ void ast_printer_default::print_expr(const ast::binary_expression& expr)
 void ast_printer_default::print_expr(const ast::call_expression& expr)
 {
 	start("call", inline_scope);
-	print_inline(expr.func);
+	print_identifier(expr.func);
+	if (!expr.args.empty())
 	{
-		start({}, inline_scope);
+		start("args", inline_scope);
 		for (const auto& arg : expr.args)
 			print_expr(arg);
 		end();
@@ -425,7 +450,7 @@ void ast_printer_default::print_expr(const ast::subscript_expression& expr)
 
 void ast_printer_default::print_expr(const ast::value_expression& expr)
 {
-	print_inline(expr.name);
+	print_identifier(expr.name);
 }
 
 void ast_printer_default::print_expr(const ast::numeric_literal& expr)

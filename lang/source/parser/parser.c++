@@ -154,8 +154,7 @@ bool parser::match_id(string_view identifier)
 	return true;
 }
 
-// TODO: optional
-std::string_view parser::parse_identifier()
+auto parser::parse_identifier() -> std::optional<std::string_view>
 {
 	if (tok != token_kind::identifier)
 		return error(diag, diagnostic_id::expected_identifier, tok);
@@ -163,7 +162,30 @@ std::string_view parser::parse_identifier()
 	auto name = tok.data;
 	advance();
 
+	assert(!name.empty());
 	return name;
+}
+
+auto parser::parse_qualified_identifier() -> std::optional<ast::identifier>
+{
+	auto name = parse_identifier();
+	if (!name)
+		return {};
+
+	ast::identifier id {
+		.name = std::string(*name)
+	};
+
+	while (match(token_kind::double_colon)) {
+		id.path.push_back(std::move(id.name));
+		auto name = parse_identifier();
+		if (!name) {
+			id.name.clear();
+			break; // TODO: better recovery
+		}
+		id.name = *name;
+	}
+	return id;
 }
 
 std::optional<size_t> parser::parse_usize()
@@ -208,28 +230,27 @@ auto parser::parse_array_size() -> std::optional<size_t>
 
 auto parser::parse_type() -> std::optional<ast::type>
 {
-	auto name = parse_identifier();
-	if (name.empty())
+	auto name = parse_qualified_identifier();
+	if (!name)
 		return {};
 
 	if (match(token_kind::ast)) {
 		return ast::pointer_type{
-			.pointee = std::string(name)
+			.pointee = *name
 		};
 	}
 
 	if (match(token_kind::l_square)) {
 		return ast::array_type{
-			.elem = std::string(name),
+			.elem = *name,
 			.size = parse_array_size(),
 		};
 	}
 
 	return ast::regular_type{
-		.name = std::string(name)
+		.name = *name
 	};
 }
-
 
 /********************** Statements **********************/
 auto parser::parse_statement_block() -> std::optional<ast::statement>
@@ -482,8 +503,8 @@ auto parser::parse_unary_expression() -> std::optional<ast::expression>
 
 auto parser::parse_field_expression(ast::expression lhs) -> ast::expression
 {
-	std::string_view name = parse_identifier();
-	if (name.empty())
+	auto name = parse_identifier();
+	if (!name)
 		return {};
 
 #if 0
@@ -493,7 +514,7 @@ auto parser::parse_field_expression(ast::expression lhs) -> ast::expression
 
 	return parse_postfix_expression(ast::field_expression{
 		.lhs = wrap(std::move(lhs)),
-		.name = std::string(name),
+		.name = std::string(*name),
 	});
 }
 
@@ -602,24 +623,25 @@ auto parser::parse_identifier_expression() -> std::optional<ast::expression>
 {
 	const auto sp = save_state();
 
-	std::string_view name = parse_identifier();
-	if (name.empty())
+	const auto id = parse_qualified_identifier();
+	if (!id)
 		return {};
 
-	if (name == "if"sv) {
+	if (*id == "if"sv) {
 		if (tok != token_kind::r_paren)
 		{
-			// Restoring state isn't necessary (and even slightly detrimental
-			// for performance), but I think it's more elegant
+			// Restoring state isn't really necessary
+			// (and even slightly detrimental for performance)
+			// but I think it's more elegant
 			restore_state(sp);
 			return parse_if_expression();
 		}
 	}
 
 	if (match(token_kind::l_paren))
-		return parse_call_expression(name);
+		return parse_call_expression(*id);
 
-	ast::value_expression expr{ .name = name };
+	ast::value_expression expr{ .name = std::move(*id) };
 
 	return expr;
 }
@@ -716,11 +738,11 @@ auto parser::parse_numeric_literal_expression() -> std::optional<ast::expression
 	return num;
 }
 
-auto parser::parse_call_expression(std::string_view name) -> std::optional<ast::expression>
+auto parser::parse_call_expression(ast::identifier name) -> std::optional<ast::expression>
 {
 	ast::call_expression expr;
 
-	expr.func = name;
+	expr.func = std::move(name);
 
 	if (!match(token_kind::r_paren)) {
 		while (true) {

@@ -11,7 +11,7 @@
 
 // TODO: put this into a separate static lib
 
-#include <aw/script/ast/middle/declaration.h>
+#include "aw/script/ast/middle/module.h"
 
 #include <aw/script/diag/diagnostics_engine.h>
 
@@ -19,8 +19,8 @@
 
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Value.h>
 #include <llvm/IR/PassManager.h>
+#include <llvm/IR/Value.h>
 
 #include <llvm/Target/TargetMachine.h>
 #include <map>
@@ -32,7 +32,7 @@ class backend_llvm : public backend {
 public:
 	explicit backend_llvm(diagnostics_engine& diag);
 
-	~backend_llvm();
+	~backend_llvm() override;
 
 	bool set_target(string_view target_triple) override;
 	void set_optimization_level(optimization_level level) override;

@@ -25,6 +25,7 @@
         <WordDetect attribute="Keyword" context="Struct"   String="struct" />
         <WordDetect attribute="Keyword" context="Type"     String="as" />
         <WordDetect attribute="Keyword" context="Foreign"  String="foreign" />
+        <WordDetect attribute="Keyword" context="Module"   String="module" />
 
         <keyword attribute="ControlFlow" String="controlflow" />
 
@@ -35,7 +36,6 @@
         <RegExpr attribute="Function" context="#stay" String="&identifier;(?=\s*\()" />
         <RegExpr attribute="Variable" context="#stay" String="&identifier;" />
       </context>
-
 
       <context attribute="Normal Text" lineEndContext="#stay" name="FindNumbers">
         <RegExpr attribute="Number" String="\b0(?:x[0-9a-fA-F_]+|o[0-7_]+|b[01_]+)\b" context="#stay"/>
@@ -80,12 +80,21 @@
         <RegExpr attribute="Error" context="#stay" String="[^(]+"/>
       </context>
 
-       <context name="Function Parameters" attribute="Normal Text" lineEndContext="#stay">
-         <DetectChar attribute="Symbol" context="#pop" char=")"/>
+      <context name="Function Parameters" attribute="Normal Text" lineEndContext="#stay">
+        <DetectChar attribute="Symbol" context="#pop!Function Return Type" char=")"/>
 
-         <IncludeRules context="FindComments" />
-         <IncludeRules context="FindVariableExt" />
-       </context>
+        <IncludeRules context="FindComments" />
+        <IncludeRules context="FindVariableExt" />
+      </context>
+
+      <context name="Function Return Type" attribute="Normal Text" lineEndContext="#stay">
+        <DetectSpaces />
+        <IncludeRules context="FindComments" />
+        <DetectChar attribute="Symbol" context="#pop!Type" char=":"/>
+
+        <RegExpr context="#pop" String="." lookAhead="1"/>
+      </context>
+
 
       <!-- variables -->
       <context attribute="Normal Text" lineEndContext="#stay" name="FindVariableExt">
@@ -145,6 +154,20 @@
         <RegExpr attribute="Error" context="#stay" String=".+"/>
       </context>
 
+      <!-- module -->
+      <context name="Module" attribute="Module" lineEndContext="#stay">
+        <DetectSpaces />
+        <IncludeRules context="FindComments" />
+        <AnyChar attribute="Symbol" context="#pop" String=";" lookAhead="1"/>
+        <DetectChar attribute="Symbol" context="#pop!Nested Module" char="{"/>
+        <RegExpr attribute="Namespace" context="#stay" String="&identifier;" />
+      </context>
+
+      <context name="Nested Module" attribute="Normal Text" lineEndContext="#stay">
+        <IncludeRules context="File" /> <!-- TODO -->
+        <DetectChar attribute="Symbol" context="#pop" char="}" />
+      </context>
+
       <!-- comments -->
       <context attribute="Normal Text" lineEndContext="#stay" name="FindComments">
         <Detect2Chars attribute="Comment" context="Comment Line" char="/" char1="/"/>
@@ -166,6 +189,7 @@
       <itemData name="Comment"     defStyleNum="dsComment" />
       <itemData name="Function"    defStyleNum="dsFunction" spellChecking="false"/>
       <itemData name="Variable"    defStyleNum="dsVariable" spellChecking="false"/>
+      <itemData name="Namespace"   defStyleNum="dsImport" spellChecking="false"/>
       <itemData name="Type"        defStyleNum="dsDataType"/>
       <itemData name="Symbol"      defStyleNum="dsOperator" spellChecking="false"/>
       <itemData name="ControlFlow" defStyleNum="dsControlFlow" spellChecking="false"/>

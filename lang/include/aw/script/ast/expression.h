@@ -51,14 +51,13 @@ struct field_expression {
 
 // TODO: tell apart lvalue and rvalue
 struct value_expression {
-	std::string_view name;
+	ast::identifier name;
 };
 
-// struct is needed due to clang's shenanigans
-using argument_list = hard_alias<std::vector<expression>>;
+using argument_list = noncopyable<std::vector<expression>>;
 
 struct call_expression {
-	std::string_view func;
+	ast::identifier func;
 	argument_list args;
 };
 
@@ -88,7 +87,7 @@ struct struct_literal {
 		std::string_view name;
 		std::unique_ptr<expression> value;
 	};
-	using field_vec = hard_alias<std::vector<field>>;
+	using field_vec = noncopyable<std::vector<field>>;
 	field_vec fields;
 };
 

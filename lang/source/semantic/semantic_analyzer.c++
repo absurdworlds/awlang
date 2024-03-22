@@ -152,6 +152,9 @@ void semantic_analyzer::visit(context& ctx, middle::function& func)
 	}
 
 	if (func.body) {
+		ctx.push_scope();
+		ctx.current_scope()->add_symbol("$func", &func); // hack!
+
 		if (func.is_variadic) {
 			using namespace std::string_view_literals;
 			error(diag, diagnostic_id::not_implemented_yet, location(), "variadic functions"sv);
@@ -159,6 +162,8 @@ void semantic_analyzer::visit(context& ctx, middle::function& func)
 		}
 
 		visit_stmt(ctx, *func.body);
+
+		ctx.pop_scope();
 	}
 }
 
@@ -267,8 +272,15 @@ void semantic_analyzer::visit_stmt(context &ctx, middle::while_statement& stmt)
 void semantic_analyzer::visit_stmt(context& ctx, middle::return_statement& stmt)
 {
 	if (stmt.value) {
-		infer_type(ctx, diag, *stmt.value);
+		auto hint = infer_type(ctx, diag, *stmt.value);
 		visit_expr(ctx, *stmt.value);
+
+		if (hint.is_ambiguous) {
+			auto func = ctx.current_scope()->find_func("$func");
+			assert(func);
+			propagate_type(ctx, diag, func->return_type, *stmt.value);
+		}
+
 	}
 }
 

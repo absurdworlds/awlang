@@ -1,11 +1,37 @@
 #ifndef aw_script_utility_type_name_h
 #define aw_script_utility_type_name_h
 
-#include <string>
+#include "aw/script/ast/type.h"
+
 #include <cassert>
-#include <aw/script/ast/type.h>
+#include <string>
 
 namespace aw::script {
+inline auto type_name(const ast::identifier& id) -> std::string
+{
+	return to_string(id);
+}
+
+inline auto type_name(const ast::unknown_type& /*type*/) -> std::string
+{
+	return "<inferred type>";
+}
+
+inline auto type_name(const ast::regular_type& type) -> std::string
+{
+	return type_name(type.name);
+}
+
+inline auto type_name(const ast::pointer_type& type) -> std::string
+{
+	return type_name(type.pointee) + "*";
+}
+
+inline auto type_name(const ast::reference_type& type) -> std::string
+{
+	return type_name(type.pointee) + "&";
+}
+
 inline auto type_name(const ast::array_type& type) -> std::string
 {
 	auto arr_size = [] (std::optional<size_t> opt) {
@@ -15,25 +41,13 @@ inline auto type_name(const ast::array_type& type) -> std::string
 		result += "]";
 		return result;
 	};
-	return type.elem + arr_size(type.size);
+	return type_name(type.elem) + arr_size(type.size);
 }
 
 inline auto type_name(const ast::type& type) -> std::string
 {
-	if (auto _ = get_if<ast::unknown_type>(&type)) {
-		return "<inferred type>";
-	} else if (auto ty = get_if<ast::regular_type>(&type)) {
-		return ty->name;
-	} else if (auto ty = get_if<ast::pointer_type>(&type)) {
-		return ty->pointee + "*";
-	} else if (auto ty = get_if<ast::reference_type>(&type)) {
-		return ty->pointee + "&";
-	} else if (auto ty = get_if<ast::array_type>(&type)) {
-		return type_name(*ty);
-	} else {
-		assert(!"Forgot to update the ast printer?");
-		return "<unresolved type>";
-	}
+	const auto visitor = [] (auto& v) -> std::string { return type_name(v); };
+	return std::visit(visitor, type);
 }
 
 } // namespace aw::script

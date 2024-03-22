@@ -1,7 +1,7 @@
 #include "resolve_references.h"
 
-#include <aw/script/diag/error_t.h>
-
+#include "aw/script/ast/middle/module.h"
+#include "aw/script/diag/error_t.h"
 
 namespace aw::script {
 using namespace middle;
@@ -22,7 +22,7 @@ struct resolver {
 
 	void visit_decl(function& func)
 	{
-		ctx.current_scope()->add_symbol(func.name, &func); // hack!
+		ctx.current_scope()->add_symbol(func.name, &func);
 
 		// TODO: local ctx instead of push/pop scope
 		ctx.push_scope();
@@ -142,7 +142,8 @@ struct resolver {
 		for (auto& arg : call.args)
 			visit_expr(arg);
 
-		call.func = ctx.current_scope()->find_func(call.func_name);
+		assert(call.func_name.path.empty()); // TODO
+		call.func = ctx.current_scope()->find_func(call.func_name.name);
 		if (!call.func)
 			error(diag, diagnostic_id::undefined_function, location(), call.func_name);
 	}
@@ -172,7 +173,8 @@ struct resolver {
 
 	void visit_expr(value_expression& expr)
 	{
-		expr.ref = ctx.current_scope()->find_var(expr.name);
+		assert(expr.name.path.empty());
+		expr.ref = ctx.current_scope()->find_var(expr.name.name);
 		if (!expr.ref)
 			error(diag, diagnostic_id::undefined_variable, location(), expr.name);
 	}
@@ -195,10 +197,10 @@ struct resolver {
 			visit_expr(*field.value);
 	}
 
-	void visit_expr(bool_literal& expr) {}
-	void visit_expr(numeric_literal& expr) {}
-	void visit_expr(float_literal& expr) {}
-	void visit_expr(string_literal& expr) {}
+	void visit_expr(bool_literal& /*expr*/) {}
+	void visit_expr(numeric_literal& /*expr*/) {}
+	void visit_expr(float_literal& /*expr*/) {}
+	void visit_expr(string_literal& /*expr*/) {}
 };
 
 void resolve_references(context& ctx, diagnostics_engine& diag, module& mod)

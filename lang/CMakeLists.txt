@@ -18,12 +18,15 @@ aw_add_library(awscript-lang STATIC
 		include/aw/script/ast/number_base.h
 		include/aw/script/ast/declaration.h
 		include/aw/script/ast/expression.h
+		include/aw/script/ast/identifier.h
+		include/aw/script/ast/linkage.h
 		include/aw/script/ast/operators.h
 		include/aw/script/ast/statement.h
 		include/aw/script/ast/type.h
 		include/aw/script/ast/middle/declaration.h
-		include/aw/script/ast/middle/statement.h
 		include/aw/script/ast/middle/expression.h
+		include/aw/script/ast/middle/module.h
+		include/aw/script/ast/middle/statement.h
 		include/aw/script/diag/diagnostic.h
 		include/aw/script/diag/diagnostics_engine.h
 		include/aw/script/diag/error_t.h
@@ -32,6 +35,7 @@ aw_add_library(awscript-lang STATIC
 		include/aw/script/parser/operators.h
 		include/aw/script/symtab/symbol_name.h
 		include/aw/script/ir/type.h
+		include/aw/script/semantic/dependency_resolver.h
 		include/aw/script/semantic/scope.h
 		include/aw/script/semantic/semantic_analyzer.h
 		include/aw/script/ir/operators.h
@@ -39,10 +43,11 @@ aw_add_library(awscript-lang STATIC
 		include/aw/script/codegen/optimization_level.h
 		include/aw/script/driver/main.h
 		include/aw/script/driver/options.h
-		include/aw/script/driver/callbacks.h
+		source/driver/linker.h
 		source/parser/errors.h
 		source/semantic/context.h
 		source/semantic/convert_to_middle.h
+		source/semantic/dependency_scanner.h
 		source/semantic/resolve_references.h
 		source/semantic/type_inference.h
 		source/codegen/llvm/backend_llvm.h
@@ -52,29 +57,32 @@ aw_add_library(awscript-lang STATIC
 		source/lexer/lexer.c++
 		source/diag/messages.c++
 		source/diag/diagnostics_engine.c++
+		source/driver/linker.c++
+		source/driver/main.c++
 		source/ast/statement.c++
 		source/parser/parser.c++
 		source/parser/parser_decl.c++
 		source/parser/operators.c++
 		source/semantic/context.c++
+		source/semantic/convert_to_middle.c++
+		source/semantic/dependency_resolver.c++
+		source/semantic/resolve_references.c++
 		source/semantic/scope.c++
 		source/semantic/semantic_analyzer.c++
-		source/semantic/convert_to_middle.c++
-		source/semantic/resolve_references.c++
 		source/semantic/type_inference.c++
 		source/codegen/backend.c++
 		source/codegen/llvm/backend_llvm.c++
 		source/codegen/llvm/optimizer_llvm.c++
 		source/codegen/llvm/gen_variable.c++
 		source/codegen/llvm/gen_cast.c++
-		source/driver/main.c++
 		source/utility/ast_printer_default.c++
 	)
 
 target_link_libraries(awscript-lang
 	PUBLIC
 		aw::io
-		aw::string)
+		aw::string
+		aw::platform)
 
 set (AWSCRIPT_USE_LLVM ON)
 if (AWSCRIPT_USE_LLVM)

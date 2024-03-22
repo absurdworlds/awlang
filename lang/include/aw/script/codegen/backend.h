@@ -22,7 +22,7 @@ class diagnostics_engine;
 namespace middle {
 class module;
 class declaration;
-}
+} // namespace middle
 
 // All of this is going to be changed in the future anyway, so
 // I didn't put much thought into it. Feel free to modify

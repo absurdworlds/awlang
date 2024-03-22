@@ -81,7 +81,7 @@ private:
 
 		auto res = file.read(buffer.get(), length);
 
-		if (res < 0)
+		if (res == -1)
 			buffer.reset();
 
 		// Sentinel

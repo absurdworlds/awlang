@@ -34,11 +34,7 @@ struct error_t {
 template<typename...Args>
 inline error_t error(diagnostics_engine& diag, diagnostic_id id, location loc, Args&&... args)
 {
-	diagnostic msg(loc, id);
-	if constexpr(sizeof...(args) > 0)
-		(msg << ... << args);
-	diag.report(msg);
-
+	diag.report(diagnostic(id, loc, std::forward<Args>(args)...));
 	return {};
 }
 

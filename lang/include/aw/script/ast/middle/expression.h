@@ -9,6 +9,7 @@
 #ifndef aw_script_ast_middle_expression_h
 #define aw_script_ast_middle_expression_h
 
+#include "aw/script/ast/identifier.h"
 #include <aw/script/ast/number_base.h>
 #include <aw/script/ir/type.h>
 
@@ -21,7 +22,7 @@
 
 namespace aw::script::middle {
 
-class expression;
+struct expression;
 
 struct cast_expression {
 	ir::type* to_type;
@@ -40,10 +41,10 @@ struct binary_expression {
 };
 
 // TODO: tell apart lvalue and rvalue
-class declaration;
+struct declaration;
 class variable;
 struct value_expression {
-	std::string_view name;
+	ast::identifier name;
 	variable* ref;
 };
 
@@ -51,7 +52,7 @@ class function;
 using argument_list = std::vector<expression>;
 struct call_expression {
 	function* func = nullptr;
-	std::string_view func_name;
+	ast::identifier func_name;
 	argument_list args;
 };
 

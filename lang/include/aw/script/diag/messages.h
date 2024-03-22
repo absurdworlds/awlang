@@ -39,5 +39,8 @@ DIAG(error, variadic_parameter, "Variadic parameter must be at the end of the pa
 DIAG(error, not_enough_arguments, "Function parameter mismatch: ‘%0’. Expects: %1, Actual: %2")
 DIAG(error, type_mismathch, "Type mismatch: ‘%0’ vs ‘%1’.")
 DIAG(error, unknown_type, "Unknown type: ‘%0’.")
+DIAG(error, module_redeclaration, "Module can be declared only once.")
+DIAG(error, module_bad_loc, "Module declaration must precede all other declarations.")
+DIAG(error, not_allowed_here, "‘%0’ declaration is not allowed here.")
 
 #undef DIAG

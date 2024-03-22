@@ -3,6 +3,7 @@
 #include "llvm_helpers.h"
 #include "optimizer_llvm.h"
 
+#include "aw/script/ast/linkage.h"
 #include <aw/script/diag/error_t.h>
 
 #include <aw/utility/ranges/paired.h>
@@ -25,6 +26,11 @@ using namespace llvm;
 namespace aw::script {
 
 static error_t error_undefined_variable(diagnostics_engine& diag, string_view name)
+{
+	return error(diag, diagnostic_id::undefined_variable, location(), name);
+}
+
+static error_t error_undefined_variable(diagnostics_engine& diag, const ast::identifier& name)
 {
 	return error(diag, diagnostic_id::undefined_variable, location(), name);
 }
@@ -234,6 +240,21 @@ struct arg_info {
 	}
 };
 
+auto convert_linkage(ast::linkage type) -> llvm::Function::LinkageTypes
+{
+	using enum ast::linkage;
+	switch (type) {
+	case internal:
+		return Function::PrivateLinkage;
+	case imported:
+		return Function::AvailableExternallyLinkage;
+	case exported:
+		return Function::ExternalLinkage;
+	}
+
+	return Function::InternalLinkage;
+}
+
 auto create_function(
 	llvm::LLVMContext& context,
 	llvm::Module* module,
@@ -299,10 +320,17 @@ auto backend_llvm::gen(const middle::function& decl) -> llvm::Value*
 
 	if (Value* res = gen(decl.body)) {
 		if (!llvm::isa<ReturnInst>(res)) {
-			if (func->getReturnType()->isVoidTy())
-				builder.CreateRetVoid();
-			else
+			if (func->getReturnType()->isVoidTy()) {
+				// TODO: is_program_entry_point
+				// TODO: investigate adding implicit return at the "middle" level
+				if (decl.name == "main") {
+					builder.CreateRet(ConstantInt::get(context, APInt(8, 0)));
+				} else {
+					builder.CreateRetVoid();
+				}
+			} else {
 				builder.CreateRet(res);
+			}
 		}
 
 		llvm::verifyFunction(*func);
@@ -459,14 +487,16 @@ auto backend_llvm::gen(const middle::empty_statement& stmt) -> llvm::Value*
 
 auto backend_llvm::gen(const middle::numeric_literal& expr) -> llvm::Constant*
 {
-	auto type = get_llvm_type(context, expr.type);
-	auto radix = unsigned(expr.base); // TODO: to_underlying
-	if (auto integer = dyn_cast<IntegerType>(type))
-		return ConstantInt::get(context, APInt(integer->getBitWidth(), expr.value, radix));
-	if (type->isFloatTy())
-		return ConstantFP::get(context, APFloat(APFloat::IEEEsingle(), expr.value));
-	if (type->isDoubleTy())
-		return ConstantFP::get(context, APFloat(APFloat::IEEEdouble(), expr.value));
+	if (expr.type) {
+		auto type = get_llvm_type(context, expr.type);
+		auto radix = unsigned(expr.base); // TODO: to_underlying
+		if (auto integer = dyn_cast<IntegerType>(type))
+			return ConstantInt::get(context, APInt(integer->getBitWidth(), expr.value, radix));
+		if (type->isFloatTy())
+			return ConstantFP::get(context, APFloat(APFloat::IEEEsingle(), expr.value));
+		if (type->isDoubleTy())
+			return ConstantFP::get(context, APFloat(APFloat::IEEEdouble(), expr.value));
+	}
 	return nullptr;
 }
 
@@ -488,11 +518,14 @@ auto backend_llvm::gen(const middle::bool_literal& expr) -> llvm::ConstantInt*
 
 auto backend_llvm::gen(const middle::value_expression& expr) -> llvm::Value*
 {
-	auto it = symtab.find(expr.name);
+	// TODO: use expr.ref instead of expr.name
+	// TODO: assign numeric IDs instead of pointers
+	assert(expr.name.path.empty());
+	auto it = symtab.find(expr.name.name);
 	if (it != symtab.end())
 		return it->second;
 
-	it = globals.find(expr.name);
+	it = globals.find(expr.name.name);
 	if (it != globals.end())
 		return it->second;
 
@@ -685,16 +718,15 @@ auto backend_llvm::gen(const middle::unary_expression& expr) -> llvm::Value*
 	return nullptr;
 }
 
-
 auto backend_llvm::gen(const middle::call_expression& expr) -> llvm::Value*
 {
-	Function* callee = cur_module->getFunction(expr.func_name);
-	if (!callee) {
-		if (!expr.func)
-			return error_is_not_declared(diag, expr.func_name);
+	const auto& func_name = expr.func->name;
+	if (!expr.func)
+		return error_is_not_declared(diag, func_name);
 
+	Function* callee = cur_module->getFunction(func_name);
+	if (!callee)
 		callee = create_function(context, cur_module.get(), *expr.func);
-	}
 
 	assert(callee->isVarArg() || callee->arg_size() == expr.args.size());
 
@@ -709,7 +741,7 @@ auto backend_llvm::gen(const middle::call_expression& expr) -> llvm::Value*
 
 	return callee->getReturnType()->isVoidTy() ?
 		builder.CreateCall(callee, argv):
-		builder.CreateCall(callee, argv, "calltmp");
+		builder.CreateCall(callee, argv, Twine(func_name, "_tmp"));
 }
 
 
@@ -815,7 +847,7 @@ auto mangle_string(std::string_view str) -> std::string
 	{
 		if (i > max_str_len)
 			break;
-		if (isAlnum(c)) {
+		if (isalnum(c)) {
 			mstr += c;
 			++i;
 		}

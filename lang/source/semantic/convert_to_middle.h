@@ -3,8 +3,8 @@
 
 #include "context.h"
 
-#include <aw/script/ast/declaration.h>
-#include <aw/script/ast/middle/declaration.h>
+#include "aw/script/ast/declaration.h"
+#include "aw/script/ast/middle/module.h"
 
 namespace aw::script {
 class diagnostics_engine;

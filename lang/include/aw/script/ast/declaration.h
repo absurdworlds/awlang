@@ -9,6 +9,7 @@
 #ifndef aw_script_ast_decl_h
 #define aw_script_ast_decl_h
 
+#include "aw/script/lexer/token.h"
 #include <aw/script/ast/mutability.h>
 #include <aw/script/ast/statement.h>
 #include <aw/script/ast/type.h>
@@ -51,7 +52,7 @@ struct function {
 	bool is_variadic() const { return params.variadic.has_value(); }
 };
 
-using var_list = hard_alias<std::vector<variable>>;
+using var_list = noncopyable<std::vector<variable>>;
 struct struct_decl {
 	std::string_view name;
 
@@ -71,20 +72,36 @@ struct foreign_block {
 	decl_list decls;
 };
 
+struct module_header {
+	std::string_view name;
+};
+
 struct module {
+	std::string path;
+	std::string_view name;
 	decl_list decls;
+};
+
+struct import_decl {
+	// Module that is imported
+	identifier mod_id;
+	// List of declarations to import
+	std::vector<unqual_id> decl_ids;
 };
 
 using declaration_variant = std::variant<
 	variable,
 	function,
 	struct_decl,
-	foreign_block
+	foreign_block,
+	module_header,
+	import_decl
 >;
 
 struct declaration : public declaration_variant {
 	using declaration_variant::declaration_variant;
 	using declaration_variant::operator=;
+	token start_token;
 };
 
 } // namespace aw::script::ast

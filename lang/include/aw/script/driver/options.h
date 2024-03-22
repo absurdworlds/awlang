@@ -28,6 +28,7 @@ struct options {
 	std::vector<std::string> input_files;
 	std::string output_file;
 	optimization_level opt_level = optimization_level::O0;
+	bool gen_debug_info = false;
 	bool dump_ast = false;
 	bool dump_sem = false;
 	bool dump_ir = false;

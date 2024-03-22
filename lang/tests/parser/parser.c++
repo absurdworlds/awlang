@@ -16,9 +16,9 @@ Test(basic_function) {
 	aw::script::source_manager srcman;
 
 	auto id = srcman.add_buffer(R"(
-	function test_func(var int x) : int;
+	function test_func(var x: int) : int;
 
-	function add(var int x, var int y) : int
+	function add(var x: int, var y: int) : int
 	{
 		-x;
 		return x + y;
@@ -34,16 +34,21 @@ Test(basic_function) {
 		.diag = diag
 	});
 
-	std::optional<ast::declaration> decl;
-
 	ast::declaration d1;
 	ast::declaration d2;
 
 	d1 = std::move(d2);
 
-	do {
-		decl = std::move(parser.parse_top_level());
-	} while(decl);
+	std::vector<ast::declaration> decls;
+
+	while(true) {
+		auto decl = parser.parse_top_level();
+		if (!decl)
+			break;
+		decls.push_back(std::move(*decl));
+	}
+
+	TestAssert(!decls.empty());
 }
 
 

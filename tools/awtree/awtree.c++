@@ -1,4 +1,3 @@
-#include "ast_printer_awdoc.h"
 #include <aw/script/utility/ast_printer_default.h>
 
 #include <aw/script/driver/main.h>
@@ -7,7 +6,7 @@
 
 #include <iostream>
 
-int main(int argc, char** argv)
+int main(int /*argc*/, char** argv)
 {
 	using namespace aw::script;
 
@@ -17,16 +16,9 @@ int main(int argc, char** argv)
 	std::cout << argv[1] << std::endl;
 
 	driver::options options;
-	options.input_files.push_back(argv[1]);
+	options.input_files.emplace_back(argv[1]);
 	options.mode = driver::mode::dry_run;
+	options.dump_ast = true;
 
-	struct print_callbacks : driver::callbacks {
-		ast_printer_default printer;
-		void process_declaration(const ast::declaration& decl) override
-		{
-			printer.print_declaration(decl);
-		}
-	} callbacks;
-
-	return driver::run_compiler(options, &callbacks);
+	return driver::run_compiler(options);
 }

@@ -20,7 +20,7 @@ int main(int argc, char** argv)
 		if (!arg)
 			break;
 
-		if (arg->type == arg->argument){
+		if (arg->type == arg->argument) {
 			options.input_files.push_back(arg->value);
 			continue;
 		}
@@ -28,8 +28,11 @@ int main(int argc, char** argv)
 		auto name = arg->name;
 		auto value = arg->value;
 
-		if (name.empty())
-			return 1;
+		if (name.empty()) {
+			std::cerr << "Invalid parameters.";
+			return EXIT_FAILURE;
+		}
+
 		if (in(name, "o", "output")) {
 			if (value.empty())
 				value = parser.get_param();
@@ -40,9 +43,11 @@ int main(int argc, char** argv)
 			options.dump_sem = true;
 		} else if (in(name, "dump-ir")) {
 			options.dump_ir = true;
+		} else if (in(name, "g", "gen-debug")) {
+			options.gen_debug_info = true;
 		} else if (in(name, "n", "dry-run")) {
 			options.mode = aw::script::driver::mode::dry_run;
-		} else if (in(name, "c")) {
+		} else if (in(name, "c", "no-link")) {
 			options.mode = aw::script::driver::mode::make_obj;
 		} else if (in(name, "O")) {
 			if (value.empty())

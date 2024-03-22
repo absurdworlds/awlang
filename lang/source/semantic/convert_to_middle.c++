@@ -132,14 +132,20 @@ struct convert_to_middle_visitor {
 
 	void convert_decl(const ast::declaration& in_decl, middle::module& mod)
 	{
-		auto wrapper = [this] (const auto& decl) -> middle::declaration
-		{
-			return convert_decl(decl);
-		};
-
 		if (auto foreign = get_if<ast::foreign_block>(&in_decl)) {
 			for (const auto& decl : foreign->decls) {
 				convert_decl(decl, mod);
+			}
+		}
+		else if (auto mod_hdr = get_if<ast::module_header>(&in_decl)) {
+			if (mod.name.empty()) {
+				mod.name = mod_hdr->name;
+			} else {
+				error(diag, diagnostic_id::module_redeclaration, location());
+			}
+
+			if (!mod.decls.empty()) {
+				error(diag, diagnostic_id::module_bad_loc, location());
 			}
 		} else {
 			mod.decls.push_back(wrap(convert_decl(in_decl)));
@@ -165,7 +171,13 @@ struct convert_to_middle_visitor {
 		return st;
 	}
 
-	auto convert_decl(const ast::foreign_block& in_struct) -> middle::declaration
+	auto convert_decl(const ast::foreign_block& /*unused*/) -> middle::declaration
+	{
+		assert(!"Unreachable");
+		return {};
+	}
+
+	auto convert_decl(const ast::module_header& /*unused*/) -> middle::declaration
 	{
 		assert(!"Unreachable");
 		return {};
@@ -376,7 +388,7 @@ struct convert_to_middle_visitor {
 				.rhs = wrap(convert_expr(*top->rhs)),
 			};
 
-			lhs = current_expr.rhs;
+			lhs = clone(current_expr.rhs);
 
 			if (!expr.lhs) {
 				expr = std::move(current_expr);

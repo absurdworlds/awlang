@@ -1,4 +1,3 @@
-// expect: 1.0, 2.0, 3.0
 foreign import: C {
 function printf(str: u8*, var...args);
 }
@@ -17,5 +16,6 @@ function main()
 		.z = 3.0,
 	};
 
+	// expect: 1.0, 2.0, 3.0
 	printf("%.1f, %.1f, %.1f\n", v.x, v.y, v.z);
 }

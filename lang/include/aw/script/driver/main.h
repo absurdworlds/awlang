@@ -10,11 +10,10 @@
 #define aw_script_driver_main_h
 
 #include <aw/script/driver/options.h>
-#include <aw/script/driver/callbacks.h>
 
 namespace aw::script::driver {
 
-int run_compiler(const options& options, callbacks* callbacks = nullptr);
+int run_compiler(const options& options);
 
 } // namespace aw::script::driver
 

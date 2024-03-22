@@ -1,3 +1,5 @@
+module subscript;
+
 foreign import: C {
 function printf(str: u8*, var...args);
 function puts(str: u8*);
@@ -16,7 +18,7 @@ function main()
 
 	// expect: 1, 2, 3
 	var i = 0;
-	while (i < 3) {
+	while i < 3 {
 		printf("%s%d", if i == 0 "" else ", ", x[i]);
 		i += 1;
 	}

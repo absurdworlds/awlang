@@ -1,6 +1,6 @@
 #include "type_inference.h"
 
-#include <aw/script/ast/middle/declaration.h>
+#include "aw/script/ast/middle/module.h"
 #include <aw/script/diag/error_t.h>
 #include <aw/script/utility/location.h>
 
@@ -207,27 +207,27 @@ struct type_inference_visitor
 		return { ctx.find_type("float_literal"), true };
 	}
 
-	auto infer_type(bool_literal& expr) -> type_hint
+	auto infer_type(bool_literal& /*expr*/) -> type_hint
 	{
 		return ctx.find_type("bool");
 	}
 
-	auto infer_type(string_literal& expr) -> type_hint
+	auto infer_type(string_literal& /*expr*/) -> type_hint
 	{
 		return ctx.find_type("string_literal");
 	}
 
-	auto infer_type(list_literal& expr) -> type_hint
+	auto infer_type(list_literal& /*expr*/) -> type_hint
 	{
 		return nullptr;
 	}
 
-	auto infer_type(numbered_list_literal& expr) -> type_hint
+	auto infer_type(numbered_list_literal& /*expr*/) -> type_hint
 	{
 		return nullptr;
 	}
 
-	auto infer_type(struct_literal& expr) -> type_hint
+	auto infer_type(struct_literal& /*expr*/) -> type_hint
 	{
 		return nullptr;
 	}
@@ -246,7 +246,7 @@ struct type_inference_visitor
 		return expr.type;
 	}
 
-	auto propagate_type(ir::type* type, cast_expression& expr) -> ir::type*
+	auto propagate_type(ir::type* /*type*/, cast_expression& expr) -> ir::type*
 	{
 		return expr.to_type;
 	}
