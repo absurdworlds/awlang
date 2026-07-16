@@ -6,7 +6,8 @@
 #include <iostream>
 
 namespace aw::script {
-ast_printer_default::ast_printer_default()
+ast_printer_default::ast_printer_default(bool print_comments)
+	: print_comments(print_comments)
 {
 
 }
