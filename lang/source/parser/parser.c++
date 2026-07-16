@@ -37,6 +37,15 @@ parser::parser(dependencies deps)
 
 bool parser::advance()
 {
+	// `comments` holds a batch collected right before the *current* `tok`,
+	// waiting for a pop_comment() call to claim it. If we're about to move
+	// past a real (non-comment) token without that having happened, the
+	// batch was never claimed as a leading comment for anything -- it was
+	// just incidental text inside whatever we're currently parsing, so
+	// discard it before collecting the next batch.
+	if (!comments.empty())
+		comments.clear();
+
 	tok = lex.next();
 	skip_comments();
 	return true; // TODO:
@@ -79,19 +88,17 @@ auto parser::pop_comment() -> std::string
 	std::string ret;
 	for (auto comment : comments)
 	{
-		if (comment.starts_with("//"))
-		{
-			if (!ret.empty())
-				ret += '\n';
+		if (comment.starts_with("//")) {
 			comment.remove_prefix(2);
-		}
-
-		// TODO: go line-by-line and remove stars
-		if (comment.starts_with("/*")) {
-			comment.remove_suffix(2);
+		} else if (comment.starts_with("/*")) {
+			// TODO: go line-by-line and remove stars
+			comment.remove_prefix(2);
 			if (comment.ends_with("*/"))
 				comment.remove_suffix(2);
 		}
+
+		if (!ret.empty())
+			ret += '\n';
 		ret += string::trim(comment);
 	}
 

@@ -59,4 +59,38 @@ Test(decl_comment) {
 		TestEqual(decl->comment, "one more function:\ndoes nothing");
 	}
 }
+
+Test(stray_comment_not_leaked) {
+	aw::script::source_manager srcman;
+
+	// The block comment inside the initializer isn't a leading comment for
+	// anything -- it shouldn't leak into var y's comment slot.
+	auto id = srcman.add_buffer(R"(
+	var x: int = 1 /* stray */ + 2;
+
+	// leading comment for y
+	var y: int = 3;
+)");
+
+	aw::script::diagnostics_engine diag(srcman);
+
+	aw::script::lexer lexer(srcman.get_buffer(id));
+
+	aw::script::parser parser({
+		.lexer = lexer,
+		.diag = diag
+	});
+
+	{
+		auto decl = parser.parse_top_level();
+		TestAssert(decl.has_value());
+		TestEqual(decl->comment, "");
+	}
+
+	{
+		auto decl = parser.parse_top_level();
+		TestAssert(decl.has_value());
+		TestEqual(decl->comment, "leading comment for y");
+	}
+}
 } // namespace aw::script
