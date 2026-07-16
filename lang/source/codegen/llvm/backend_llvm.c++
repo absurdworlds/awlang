@@ -16,7 +16,7 @@
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/Support/Host.h>
+#include <llvm/TargetParser/Host.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 
@@ -147,7 +147,7 @@ bool backend_llvm::write_object_file(string_view out_path)
 	}
 
 	legacy::PassManager emit_pass;
-	auto FileType = CGFT_ObjectFile;
+	auto FileType = CodeGenFileType::ObjectFile;
 
 	if (target_machine->addPassesToEmitFile(emit_pass, dest, nullptr, FileType)) {
 		errs() << "TheTargetMachine can't emit a file of this type";
