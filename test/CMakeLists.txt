@@ -14,6 +14,7 @@ set(TESTS
 	errors/not_allowed_here.aw
 	errors/not_implemented_yet.aw
 	errors/recovery.aw
+	errors/pointer_nonzero_init.aw
 	codegen/array.aw
 	codegen/array_of_structs.aw
 	codegen/chain.aw
@@ -27,6 +28,7 @@ set(NEGATIVE_TESTS
 	errors/not_allowed_here.aw
 	errors/not_implemented_yet.aw
 	errors/recovery.aw
+	errors/pointer_nonzero_init.aw
 )
 
 set(RUNTIME_TESTS
