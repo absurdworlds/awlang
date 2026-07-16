@@ -313,6 +313,11 @@ struct type_inference_visitor
 
 	auto propagate_type(ir::type* type, numeric_literal& expr) -> ir::type*
 	{
+		// Only a literal `0` may stand in for a null pointer; any other
+		// integer literal assigned to a pointer type is a real mismatch.
+		if (get_if<ir::pointer_type>(&type->kind) && expr.value != "0")
+			return error(diag, diagnostic_id::type_mismathch, location(), type->name, std::string("numeric_literal"));
+
 		return (expr.type = type);
 	}
 

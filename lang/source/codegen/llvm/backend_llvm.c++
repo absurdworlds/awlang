@@ -368,8 +368,12 @@ auto backend_llvm::gen_local(const middle::variable& var) -> llvm::Value*
 
 	auto* alloca = builder.CreateAlloca(get_llvm_type(context, var.type), nullptr, var.name);
 
-	if (var.value)
-		builder.CreateStore(gen(var.value), alloca);
+	if (var.value) {
+		auto* init = gen(var.value);
+		if (!init)
+			return nullptr;
+		builder.CreateStore(init, alloca);
+	}
 
 	return alloca;
 }
@@ -497,6 +501,8 @@ auto backend_llvm::gen(const middle::numeric_literal& expr) -> llvm::Constant*
 			return ConstantFP::get(context, APFloat(APFloat::IEEEsingle(), expr.value));
 		if (type->isDoubleTy())
 			return ConstantFP::get(context, APFloat(APFloat::IEEEdouble(), expr.value));
+		if (type->isPointerTy())
+			return ConstantPointerNull::get(cast<PointerType>(type));
 	}
 	return nullptr;
 }
