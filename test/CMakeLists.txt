@@ -3,22 +3,29 @@ file(GLOB_RECURSE SOURCES *.aw)
 add_custom_target(testfiles SOURCES ${SOURCES})
 
 set(TESTS
-	syntax/as.aw
 	syntax/comments.aw
-	syntax/if.aw
 	syntax/operators.aw
 	syntax/precedence.aw
-	syntax/struct.aw
-	syntax/subscript.aw
 	errors/invalid_decls.aw
 	errors/not_allowed_here.aw
 	errors/not_implemented_yet.aw
 	errors/recovery.aw
 	codegen/array.aw
 	codegen/array_of_structs.aw
-	codegen/chain.aw
 	codegen/function.aw
 	modules/main.aw
+)
+
+# Tests whose .aw source carries `// expect: <value>` comments documenting
+# what the program should print. run_expect_test.py compiles and runs the
+# program and checks those values show up in its stdout, in order -- these
+# comments used to be undocumented notes nothing ever verified.
+set(EXPECT_TESTS
+	syntax/as.aw
+	syntax/if.aw
+	syntax/struct.aw
+	syntax/subscript.aw
+	codegen/chain.aw
 )
 
 set(NEGATIVE_TESTS
@@ -51,6 +58,22 @@ foreach (test ${RUNTIME_TESTS})
 endforeach()
 
 set_property(TEST codegen/pointer.aw PROPERTY PASS_REGULAR_EXPRESSION "pass;passed!")
+
+find_package(Python3 COMPONENTS Interpreter)
+if (Python3_Interpreter_FOUND)
+	foreach (test ${EXPECT_TESTS})
+		get_filename_component(name ${test} NAME_WE)
+		add_test (
+			NAME ${test}
+			COMMAND ${Python3_EXECUTABLE}
+				${CMAKE_CURRENT_SOURCE_DIR}/run_expect_test.py
+				$<TARGET_FILE:awscriptc>
+				${CMAKE_CURRENT_SOURCE_DIR}/${test}
+				${CMAKE_CURRENT_BINARY_DIR}/${name}_expect
+		)
+		set_property(TEST ${test} PROPERTY TIMEOUT 5)
+	endforeach()
+endif()
 
 foreach (test ${TESTS})
 	add_test (
