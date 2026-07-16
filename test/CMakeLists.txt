@@ -30,6 +30,8 @@ set(NEGATIVE_TESTS
 
 set(RUNTIME_TESTS
 	codegen/pointer.aw
+	codegen/break.aw
+	codegen/continue.aw
 )
 
 option(AWSCRIPT_NIY_TESTS "Run tests for NIY functionality" OFF)
@@ -51,6 +53,8 @@ foreach (test ${RUNTIME_TESTS})
 endforeach()
 
 set_property(TEST codegen/pointer.aw PROPERTY PASS_REGULAR_EXPRESSION "pass;passed!")
+set_property(TEST codegen/break.aw PROPERTY PASS_REGULAR_EXPRESSION "passed!")
+set_property(TEST codegen/continue.aw PROPERTY PASS_REGULAR_EXPRESSION "passed!")
 
 foreach (test ${TESTS})
 	add_test (
