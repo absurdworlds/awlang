@@ -159,9 +159,9 @@ auto resolve_dependencies(
 	return std::move(r.deps);
 }
 
-void dump_ast(array_view<ast::module> modules)
+void dump_ast(array_view<ast::module> modules, bool print_comments)
 {
-	ast_printer_default printer;
+	ast_printer_default printer(print_comments);
 	for (const auto& mod : modules)
 	{
 		for (const auto& decl : mod.decls)
@@ -248,7 +248,7 @@ int run_compiler(const options& options)
 	std::vector<ast::module> in_modules = parse_files(srcman, diag, options.input_files);
 
 	if (options.dump_ast)
-		dump_ast(in_modules);
+		dump_ast(in_modules, options.print_comments);
 
 	if (diag.has_error())
 		return EXIT_FAILURE;

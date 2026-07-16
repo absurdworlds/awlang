@@ -32,6 +32,7 @@ struct options {
 	optimization_level opt_level = optimization_level::O0;
 	bool gen_debug_info = false;
 	bool dump_ast = false;
+	bool print_comments = false;
 	bool dump_sem = false;
 	bool dump_ir = false;
 	bool profile_compiler = false;

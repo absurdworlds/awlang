@@ -41,6 +41,8 @@ int main(int argc, char** argv)
 			options.profile_compiler = true;
 		} else if (in(name, "dump-ast")) {
 			options.dump_ast = true;
+		} else if (in(name, "print-comments")) {
+			options.print_comments = true;
 		} else if (in(name, "dump-sem-tree")) {
 			options.dump_sem = true;
 		} else if (in(name, "dump-ir")) {

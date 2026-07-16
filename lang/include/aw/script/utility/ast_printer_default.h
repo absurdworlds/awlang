@@ -8,7 +8,7 @@ namespace aw::script {
 class ast_printer_default : public ast_printer
 {
 public:
-	ast_printer_default();
+	explicit ast_printer_default(bool print_comments = false);
 	~ast_printer_default();
 
 	void print_declaration(const ast::declaration& decl) override;
