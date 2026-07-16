@@ -18,6 +18,7 @@ set(TESTS
 	codegen/array_of_structs.aw
 	codegen/chain.aw
 	codegen/function.aw
+	codegen/pointer_null_init.aw
 	modules/main.aw
 )
 
