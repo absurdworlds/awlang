@@ -549,6 +549,34 @@ auto backend_llvm::gen(const value_ptr<middle::expression>& expr) -> llvm::Value
 	return expr ? gen(*expr) : nullptr;
 }
 
+/*
+ * Tells apart the two kinds of thing gen_expr() can hand back: the value
+ * itself (immutable arguments, literals, computed results), or a memory
+ * location holding it (an alloca for a local, a global, a GEP into an
+ * aggregate). Only the latter has to be loaded to read the current value.
+ *
+ * This used to be guessed from the types -- load whenever an expression of
+ * non-pointer type produced a pointer -- but with opaque pointers a slot
+ * holding a `T*` and a plain `T*` are both just `ptr`, so a pointer-typed
+ * variable was never loaded and its alloca leaked out in place of its
+ * value (see test/codegen/pointer.aw).
+ */
+static bool holds_memory_location(const middle::expression& expr, llvm::Value* value)
+{
+	// A string literal's global *is* the value -- the pointer to the data
+	// is what gets passed around, so it must never be loaded.
+	if (std::holds_alternative<middle::string_literal>(expr))
+		return false;
+
+	// Locals, temporaries built for aggregate literals, globals and element
+	// accesses all name storage. Everything else (immutable arguments, which
+	// stay plain llvm::Argument values, constants, call results, computed
+	// expressions) is already a value, even when its type is a pointer.
+	return isa<AllocaInst>(value)
+	    || isa<GlobalVariable>(value)
+	    || isa<GetElementPtrInst>(value);
+}
+
 auto backend_llvm::gen(const middle::expression& expr) -> llvm::Value*
 {
 	auto value = gen_expr(expr);
@@ -560,10 +588,9 @@ auto backend_llvm::gen(const middle::expression& expr) -> llvm::Value*
 	if (std::holds_alternative<ir::reference_type>(expr.type->kind))
 		return value;
 
-	auto* value_type = value->getType();
-	auto* expr_type = get_llvm_type(context, expr.type);
-	if (value_type->isPointerTy() && !expr_type->isPointerTy()) {
+	if (holds_memory_location(expr, value)) {
 		// Assume the type is correct
+		auto* expr_type = get_llvm_type(context, expr.type);
 		return builder.CreateLoad(expr_type, value, value->getName());
 	}
 	return value;

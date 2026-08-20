@@ -6,6 +6,6 @@ func main()
 {
 	var s : u8* = "passed!";
 
-	// expect: test
+	// expect: passed!
 	puts(s);
 }
