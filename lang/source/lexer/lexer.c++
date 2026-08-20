@@ -9,6 +9,7 @@
 #include <aw/script/lexer/lexer.h>
 
 #include <aw/algorithm/in.h>
+#include <aw/utility/string/parser_helpers.h>
 
 #include "char_type.h"
 
@@ -118,13 +119,7 @@ bool lexer::lex_string_literal(token& token)
 	char const* start = cur;
 
 	++cur; // consume '"'
-	while (*cur != '"') {
-		cur = std::find(cur, end, '"');
-		if (cur == end)
-			break;
-		if (prev() == '\\')
-			++cur;
-	}
+	cur = find_non_escaped_char(cur, end, '"', '\\');
 
 	const bool complete = cur < end;
 	if (complete)

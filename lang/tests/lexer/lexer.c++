@@ -68,6 +68,41 @@ Test(incomplete_string_should_be_marked_as_such) {
 	TestEqual(tok.data, string);
 }
 
+Test(escaped_quote_does_not_end_a_string) {
+	const auto string = R"("a\"b")"sv;
+	const auto tok = lex_single_token(string);
+	TestAssert(!tok.incomplete);
+	TestAssert(tok.kind == token_kind::string_literal);
+	TestEqual(tok.data, string);
+}
+
+Test(escaped_backslash_does_not_escape_the_quote) {
+	Checks {
+		// the string ends with a backslash, escaped by another one
+		const auto string = R"("a\\")"sv;
+		const auto tok = lex_single_token(string);
+		TestAssert(!tok.incomplete);
+		TestEqual(tok.data, string);
+	}
+
+	Checks {
+		// three backslashes: the last one escapes the quote, so the
+		// string carries on to the next one
+		const auto string = R"("a\\\"b")"sv;
+		const auto tok = lex_single_token(string);
+		TestAssert(!tok.incomplete);
+		TestEqual(tok.data, string);
+	}
+}
+
+Test(string_ending_in_a_lone_escape_is_incomplete) {
+	const auto string = R"("abc\)"sv;
+	const auto tok = lex_single_token(string);
+	TestAssert(tok.incomplete);
+	TestAssert(tok.kind == token_kind::string_literal);
+	TestEqual(tok.data, string);
+}
+
 Test(comments_should_lex_as_regular_tokens) {
 	Checks {
 		const auto s = "//comment"sv;
